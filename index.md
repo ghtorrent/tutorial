@@ -2,7 +2,7 @@
 
 by _[Georgios Gousios](http://gousios.org)_ and _[Diomidis Spinellis](http://spinellis.gr)_
 
-This is the web page for the GHTorrent tutorial given as an [ICSE 2017 technical briefing]()
+This is the web page for the GHTorrent tutorial given as an [ICSE 2017 technical briefing](http://icse2017.gatech.edu/?q=technical_briefings_program)
 
 ### Contents
 
@@ -10,8 +10,8 @@ We plan to cover at least the following aspects:
 
 * GitHub data collection strategies, including querying the API, using online services such as GitHub Archive and GHTorrent.
 * Using GHTorrent to sample appropriate repositories for various types of research questions.
-* Writing, managing, and optimizing complex and expen- sive relational queries on GHTorrent relational data.
-* Using GHTorrent effectively: understanding the data col- lection challenges and avoiding common pitfalls.
+* Writing, managing, and optimizing complex and expensive relational queries on GHTorrent relational data.
+* Using GHTorrent effectively: understanding the data collection challenges and avoiding common pitfalls.
 * Copyright and privacy issues when using the GitHub data.
 
 ### Downloads
