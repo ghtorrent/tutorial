@@ -21,13 +21,17 @@ Our tutorial will be based on the following data sources:
 * [SQLite3 database](https://github.com/ghtorrent/tutorial/blob/master/rxjs-ghtorrent.db). You can use this directly with a command line or a graphical SQLite3 database editor.
 * [MongoDB DB dump](https://github.com/ghtorrent/tutorial/blob/master/rxjs-mongo.tar.gz). To restore this, you will a running MongoDB version.
 
+To create them, we have run the default GHTorrent data collection process
+on the [ReactiveX/rxjs](https://github.com/ReactiveX/rxjs) project.
+The data are current on Feb 14.
+
 ### Have your say!
 
 What would you like to see covered in the technical briefing?
 
 <div id="disqus_thread"></div>
 <script type="text/javascript">
-var disqus_shortname = 'ghtorrent'; 
+var disqus_shortname = 'ghtorrent';
 /* * * DON'T EDIT BELOW THIS LINE * * */
 (function() {
  var dsq = document.createElement('script');
