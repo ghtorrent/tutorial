@@ -1,0 +1,101 @@
+---
+title: "Mining Software Engineering Data from GitHub"
+author: "Georgios Gousios and Diomidis Spinellis"
+date: "3/2/2017"
+output:
+   revealjs::revealjs_presentation:
+    theme: simple
+    center: false
+    reveal_options:
+      slideNumber: true
+      previewLinks: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_knit$set(sql.max.print = 5)
+
+# Setup DB connection for use in the code blocks below
+library(DBI)
+db <- dbConnect(RSQLite::SQLite(), dbname = "rxjs-ghtorrent.db")
+```
+
+# GitHub and their data
+
+With 40M repos and 15M users, [GitHub](http://github.com) is the largest source
+code archive and one of the largest online collaboration platforms on the
+planet.
+
+For software engineering researchers, GitHub is cool because:
+
+* [api.github.com](https://api.github.com)
+* process and product data
+* interconnection
+
+## GitHub's REST API
+
+All data from all public
+
+* *Events*: A real-time endpoint of all things happening on GitHub
+
+* *Entities*: Represent the state of a resource at the time of query
+
+## Ways of accessing GitHub data
+
+* [REST API / GraphQL](https://developer.github.com)
+* [GitHub Archive](http://githubarchive.org) Collects GitHub events and offers
+them over BigQuery
+* [GHTorrent](http://ghtorrent.org) Collects GitHub events, resolves all
+entities linked from those and creates a relational view. Data is offered as
+downloads, online access services or over BigQuery.
+* [Github on BigQueury]() The source code of all public GitHub repos along
+with metadata on BigQuery.
+
+# What is GHTorrent?
+
+GHTorrent collects all data from the GitHub API
+
+## Data collection
+
+## Collection modes
+
+* **Normal operation**: Follow the event timeline, apply dependency-based retrieval
+* **Periodic updates**: Refresh the state of all repos/users (cater for deleted repos, changed user locations etc)
+* **Full retrievals**: Get all info for a repo/user, in case stuff is missing
+
+## Important tables -- Projects
+
+## Important tables -- Users
+
+## Promises and perils
+
+# Example queries
+
+## Basic info about forks
+
+```{sql, connection=db, echo=T}
+select u.login, p.name,  p.forked_commit_id
+from projects p, users u
+where p.forked_from is not null
+and u.id = p.owner_id
+order by p.id desc
+```
+
+## Which forks contributed code?
+
+
+## What are the core team members?
+
+
+## Which countries contributed most commits?
+
+```{sql, connection=db, echo=T}
+select u.country_code, count(*) num_commits
+from users u, commits c
+where u.id = c.author_id
+  and country_code is not null
+group by u.country_code
+order by num_commits desc
+```
+
+# Using GHTorrent effectively
