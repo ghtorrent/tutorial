@@ -32,9 +32,9 @@ For software engineering researchers, GitHub is cool because:
 * process and product data
 * interconnection
 
-## GitHub's REST API
+## GitHub's API
 
-All data from all public
+Contains all data from all public repositories
 
 * *Events*: A real-time endpoint of all things happening on GitHub
 
@@ -45,29 +45,188 @@ All data from all public
 * [REST API / GraphQL](https://developer.github.com)
 * [GitHub Archive](http://githubarchive.org) Collects GitHub events and offers
 them over BigQuery
+* [Github on BigQueury](https://cloud.google.com/bigquery/public-data/github) 
+The source code of all public GitHub repos along with metadata on BigQuery.
 * [GHTorrent](http://ghtorrent.org) Collects GitHub events, resolves all
 entities linked from those and creates a relational view. Data is offered as
 downloads, online access services or over BigQuery.
-* [Github on BigQueury]() The source code of all public GitHub repos along
-with metadata on BigQuery.
 
-# What is GHTorrent?
+## The REST API
 
-GHTorrent collects all data from the GitHub API
+The REST API allows us to browse entities given a known starting point
+
+```{bash, echo=T}
+# Find Microsoft's 5 most starred repos
+curl -s "https://api.github.com/orgs/microsoft/repos?per_page=100&page=1" | 
+jq 'sort_by(.stargazers_count) |.[] | [.name, .stargazers_count] | @csv'| 
+sed -e 's/^"\(.*\)"$/\1/' |tr -d '\' | 
+tail -n 5
+```
+
+* An API key is needed, 5k reqs/hour
+* Always use in combination with `per_page=100`
+* Too fine-grained for many MSR tasks
+
+## GraphQL API
+
+GraphQL API allows us to query entities and their dependencies in one go
+
+```javascript
+{
+  user(login: "gousiosg") {
+    name
+    location
+    organizations(first:10) {
+      nodes {
+        name
+        repositories(first: 20) {
+          nodes {
+            name
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+## GitHub Archive
+
+![GitHub Archive](gharchive.png)
+
+Collects all GitHub **events** since late 2011, allows querying over Google
+BigQuery.
+
+## GitHub data on BigQuery
+
+An updating snapshot of both code + metadata for 2.5M repos. Allows for new
+types of research:
+
+* What are the most popular testing frameworks for Python?
+
+```sql
+SELECT lib, count(*) AS count
+FROM (
+  SELECT REGEXP_EXTRACT(versions, r"(\w*)") as lib
+  from (
+    SELECT first(split(c.content, '\n')) as versions
+    FROM (
+        SELECT * 
+        FROM [bigquery-public-data:github_repos.files]
+        WHERE path contains 'requirements.txt'
+      ) AS f
+      JOIN 
+         [bigquery-public-data:github_repos.contents] c on f.id = c.id
+    ) AS v
+  WHERE REGEXP_MATCH(versions, "[>=]=[0-9]*")
+) AS l
+GROUP BY lib
+ORDER BY count DESC
+```
+
+## GitHub data on BigQuery
+
+Which repos are affected by our vulnerability disclosure (Operation Rosehub)?
+
+```sql
+SELECT pop, repo_name, path
+FROM (
+  SELECT id, repo_name, path
+  FROM `bigquery-public-data.github_repos.files` AS files
+  WHERE path LIKE '%pom.xml' AND
+    EXISTS (
+      SELECT 1
+      FROM `bigquery-public-data.github_repos.contents`
+      WHERE NOT binary AND
+        content LIKE '%commons-collections<%' AND
+        content LIKE '%>3.2.1<%' AND
+        id = files.id
+    )
+)
+JOIN (
+  SELECT
+    difference.new_sha1 AS id,
+    ARRAY_LENGTH(repo_name) AS pop
+  FROM `bigquery-public-data.github_repos.commits`
+  CROSS JOIN UNNEST(difference) AS difference
+)
+USING (id)
+ORDER BY pop DESC;
+```
+
+Checkout the work of [Felipe Hoffa](https://medium.com/google-cloud/github-on-bigquery-analyze-all-the-code-b3576fd2b150)
+
+# GHTorrent
+
+## What is GHTorrent?
+
+GHTorrent collects all data, both events and entities, from the GitHub REST API 
+and makes them available:
+
+* As queriable [MySQL](http://ghtorrent.org/mysql.html) and 
+[MongoDB](http://ghtorrent.org/raw.html) databases
+* As [database dumps](http://ghtorrent.org/downloads.html) for both databases
+* Over Google [BigQuery](https://bigquery.cloud.google.com/dataset/ghtorrent-bq:ght_2017_01_19) (MySQL data only)
+* As continuously updating data streams (also, over [Google Pub/Sub](https://console.cloud.google.com/cloudpubsub/topicList?project=ghtorrent-bq) )
+
+## Some statistics about GHTorrent
+
+* $>$ 15TB of MongoDB (raw) data
+* $>$ 5B rows in MySQL
+* 140k API reqs/hour
+* 70+ users donated API keys
+* 300 users, from > 200 institutions have access
+* 100+ papers
+
+## Growth
+
+This is how fast MongoDB grows (x1M)
+
+| Entity| 2013 | 2016 | 2017 | $\delta$ 2016 - 2017 |
+|:----- |:----:|:----:|:----:|:--------------------:|
+|Events | 43 | 476 | 886 | 1.9x  |
+|Users | 0.7 | 6.7 | 13.5 | 2x|
+|Repos | 1.3| 28 | 57 | 2x |
+|Commits | 29.9 | 367 | 662 | 1.8x |
+|Issues | 2.3 | 24,1 | 41.1 | 1.7x |
+|Pull requests | 1.1 | 11.9 | 23.8 | 2x |
+|Issue Comments | 2.8 |42 | 74.2 | 1.7x |
+|Watchers | 7.7 | 51 | 84.9 | 1.6x |
+
+GitHub/GHTorrent doubled its size in 2016!
 
 ## Data collection
+
+![Retrieval scheme](retrieval.png){ width=80% }
+
+GHTorrent follows the event stream and recursively retrieves linked
+entities.
+
+## Distributed operation
+
+![Retrieval scheme](distributed.png){ width=90% }
+
+* _Event retrieval_ nodes query the event API
+* _Data retrieval_ nodes apply the recursive descent retrieval process
+    * One API key per data retrieval node
 
 ## Collection modes
 
 * **Normal operation**: Follow the event timeline, apply dependency-based retrieval
 * **Periodic updates**: Refresh the state of all repos/users (cater for deleted repos, changed user locations etc)
-* **Full retrievals**: Get all info for a repo/user, in case stuff is missing
+* **Full retrievals**: Get all info for a repo/user, in case some information is missing
 
 ## Important tables -- Projects
 
+
 ## Important tables -- Users
 
-## Promises and perils
+
+## How can I use GHTorrent?
+
+* Using access services
+* Roll your own dataset
+* 
 
 # Example queries
 
@@ -82,10 +241,12 @@ order by p.id desc
 ```
 
 ## Which forks contributed code?
-
+```{sql, connection=db, echo=T, eval=F}
+```
 
 ## What are the core team members?
-
+```{sql, connection=db, echo=T, eval=F}
+```
 
 ## Which countries contributed most commits?
 
@@ -99,3 +260,77 @@ order by num_commits desc
 ```
 
 # Using GHTorrent effectively
+
+## Combining MongoDB and MySQL data
+
+## Real-time data analysis
+
+## Common pitfals and how to avoid them
+
+* GHTorrent (or any GitHub dataset) is not an exact GitHub replica!
+
+You can retrieve a set of data and write scripts to fill in the gaps
+using the GitHub API/GraphQL.
+
+* Don't select repositories to analyze manually!
+
+This will lead to non-reprentativeness. Define a population first,
+then use _stratified sampling_ to select repositories from it.
+
+## Common pitfals and how to avoid them
+
+* Repositories are not projects!
+
+A large project, such as Homebrew, is usually composed of multiple
+repositories. Some repositories have equally active forks.
+To study a _project_ as a community, make sure you include all its 
+related activity.
+
+* Most repositories are idle!
+
+Selecting randomly from repositories will lead to toy/dead repositories.
+
+## Common pitfals and how to avoid them
+
+* Many active projects do not GitHub exclusively
+
+The prime example are Apache projects. Projects with with high
+commit counts but not so many issues/pull requests are using other collaboration
+platforms.
+
+* Not all activity is due to users
+
+![Retrieval scheme](packman.png){ width=90% }
+Beware of robots and tool integrations, especially in issues and pull requests!
+
+## Selecting projects to analyze
+
+## GHTorrent and privacy
+
+```{js, echo=T}
+{
+    "id": "4141500869",
+    "type": "IssueCommentEvent",
+    "actor": {},
+    "repo": {},
+    "payload": {
+      "action": "created",
+      "issue": {
+        "id": 158442053,
+        "number": 138,
+        "title": "Issue in CopyrightedProjectName",
+        "user": {},
+        "labels": [],
+        "state": "closed",
+        "body": "Added data holding classes and a map manager. Will add a system soon"
+      },
+      "comment": {
+        "created_at": "2016-06-14T05:51:16Z",
+        "updated_at": "2016-06-14T05:51:16Z",
+        "body": "continuing in #141 \r\n"
+      }
+    }
+}
+```
+
+## Contributing to GHTorrent
