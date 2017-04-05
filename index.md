@@ -25,6 +25,14 @@ To create them, we have run the default GHTorrent data collection process
 on the [ReactiveX/rxjs](https://github.com/ReactiveX/rxjs) project.
 The data are current on Feb 14.
 
+### Before you come to the Technical Briefing
+
+We plan to make the technical briefing an interactive session where we will work together on common GHTorrent repository 
+mining tasks. To make the session as productive as possible please make sure that:
+
+* You bring your laptop!
+* Install SQLite3 and download our [example database](https://github.com/ReactiveX/rxjs)
+
 ### Have your say!
 
 What would you like to see covered in the technical briefing?
