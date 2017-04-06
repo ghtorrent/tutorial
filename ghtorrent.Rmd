@@ -1,7 +1,7 @@
 ---
 title: "Mining Software Engineering Data from GitHub"
 author: "Georgios Gousios and Diomidis Spinellis"
-date: "3/2/2017"
+date: "May 23, 2017"
 output:
    revealjs::revealjs_presentation:
     theme: white
@@ -181,7 +181,7 @@ and makes them available:
 
 This is how fast MongoDB grows (x1M)
 
-| Entity| 2013 | 2016 | 2017 | $\Delta$ 2016 - 2017 |
+| Entity| 2013 | Feb 2016 | Apr 2017 | $\Delta$ 2016 - 2017 |
 |:----- |:----:|:----:|:----:|:--------------------:|
 |Events | 43 | 476 | 886 | 1.9x  |
 |Users | 0.7 | 6.7 | 13.5 | 2x|
@@ -192,7 +192,7 @@ This is how fast MongoDB grows (x1M)
 |Issue Comments | 2.8 |42 | 74.2 | 1.7x |
 |Watchers | 7.7 | 51 | 84.9 | 1.6x |
 
-GitHub/GHTorrent doubled its size in 2016!
+GitHub/GHTorrent doubled its size during the last 14 months!
 
 ## Data collection
 
@@ -215,19 +215,109 @@ entities.
 * **Periodic updates**: Refresh the state of all repos/users (cater for deleted repos, changed user locations etc)
 * **Full retrievals**: Get all info for a repo/user, in case some information is missing
 
-## Important tables -- Projects
-
-
 ## Important tables -- Users
+![Users](users.png){ width=50% }
+
+* Type: USR or ORG
+* Fake users represent emails with corresponding GitHub account
+* ~15% users are geolocated
+* Emails and real names not distributed by default
+
+## Important tables -- Projects & Commits
+![projects commits](projects-commits.png){ width=60% }
+
+* A fork has a non-NULL `forked_from` and `forked_commit_id`
+* `language` in projects represents the primary language at collection time. More details in table `project_languages`
+* A commit is only stored once per SHA
+* The table `project_commits` links commits to projects
+
+## Important tables -- Pull Requests
+
+* If `head_repo_id` is null $\rightarrow$ the fork was deleted
+* Entries in `pull_request_history` represent a log of actions on a PR
+* PRs and issues are dual on GitHub
+    * The PR history is also reflected in `issue_events`
+* A PR is associated with 3 times of comments:
+    * `issue_comments`: The PR/Issue discussion
+    * `pull_request_comments`: PR-global code review comments
+    * `commit_comments`: Line-local code review comments
+* A PR has associated `pull_request_commits` (not retrievable in case of rebases)
+
+##  SQL Schema: Things to remember
+
+* The info in `organization_members` and `project_members` is not trustworthy,
+as it is optional for orgs/projects to publish it
+* `watchers` means GitHub stars
+* `watchers` and `followers` are append-only tables (GitHub does not emit events on delete/update)
+* `followers` is only updated during periodic updates, as GitHub stopped emitting
+`FollowEvent`s
+* The timestamps in `followers` and `watchers` were relative to the time of
+retrieval. Since mid-2015 they are accurate.
+
+## Get all commits for a non-fork
+```{sql, connection=db, echo=T}
+select u1.login as author, c.sha, c.created_at
+from projects p, users u, users u1, commits c, project_commits pc
+where pc.commit_id = c.id
+  and pc.project_id = p.id
+  and u1.id = c.author_id
+  and u.id = p.owner_id
+  and u.login = 'ReactiveX'
+  and p.name = 'rxjs'
+order by c.created_at desc
+```
+
+## Get all commits for a fork (1)
+```{sql, connection=db, echo=T}
+select c.id, u1.login as author, c.sha, c.created_at
+from projects p, users u, users u1, commits c, project_commits pc
+where pc.commit_id = c.id
+  and pc.project_id = p.id
+  and u1.id = c.author_id
+  and u.id = p.owner_id
+  and u.login = 'herflis'
+  and p.name = 'rxjs-1'
+order by c.created_at desc
+```
+
+**Q**: Why do we only get 2 commits?
 
 
-## How can I use GHTorrent?
+## Get all commits for a fork (2)
 
-* Using access services
-* Roll your own dataset
-* 
+What the previous query returns is a list of commits up to the fork point.
+We also need to retrieve the base repository commits up to the fork point.
 
-## Example queries
+First, we get some information to make querying simpler
+
+```{sql, connection=db, echo=T}
+select p.id, p.forked_from, p.forked_commit_id 
+from projects p, users u
+where u.id = p.owner_id
+  and u.login = 'herflis'
+  and p.name = 'rxjs-1'
+```
+
+## Get all commits for a fork (3)
+```{sql, connection=db, echo=T}
+select id, author, sha, created_at
+from (
+  select c.id, u1.login as author, c.sha, c.created_at
+  from users u1, commits c, project_commits pc
+  where pc.commit_id = c.id
+    and pc.project_id = 450
+    and u1.id = c.author_id
+  union
+  select c.id, u1.login as author, c.sha, c.created_at
+  from users u1, commits c, project_commits pc
+  where pc.commit_id = c.id
+    and pc.project_id = 1
+    and u1.id = c.author_id
+    and c.created_at <
+      (select created_at from commits where id = 3)
+) as commits
+order by created_at desc
+```
 
 ## Basic info about forks
 
