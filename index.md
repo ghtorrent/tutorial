@@ -19,7 +19,7 @@ We plan to cover at least the following aspects:
 Our tutorial will be based on the following data sources:
 
 * [SQLite3 database](https://github.com/ghtorrent/tutorial/blob/master/rxjs-ghtorrent.db). You can use this directly with a command line or a graphical SQLite3 database editor.
-* [MongoDB DB dump](https://github.com/ghtorrent/tutorial/blob/master/rxjs-mongo.tar.gz). To restore this, you will a running MongoDB version.
+* [MongoDB DB dump](https://github.com/ghtorrent/tutorial/blob/master/rxjs-mongo.tar.gz). To restore this, you will need a running MongoDB.
 
 To create them, we have run the default GHTorrent data collection process
 on the [ReactiveX/rxjs](https://github.com/ReactiveX/rxjs) project.
@@ -31,7 +31,7 @@ We plan to make the technical briefing an interactive session where we will work
 mining tasks. To make the session as productive as possible please make sure that:
 
 * You bring your laptop!
-* Install SQLite3 and download our [example database](https://github.com/ReactiveX/rxjs)
+* Install SQLite3, a client of it and download our [SQLite3 database](https://github.com/ghtorrent/tutorial/blob/master/rxjs-ghtorrent.db)
 
 ### Have your say!
 
