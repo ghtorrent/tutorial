@@ -4,7 +4,8 @@ author: "Georgios Gousios and Diomidis Spinellis"
 date: "3/2/2017"
 output:
    revealjs::revealjs_presentation:
-    theme: simple
+    theme: white
+    css: theme.css
     center: false
     reveal_options:
       slideNumber: true
@@ -20,7 +21,7 @@ library(DBI)
 db <- dbConnect(RSQLite::SQLite(), dbname = "rxjs-ghtorrent.db")
 ```
 
-# GitHub and their data
+## GitHub and their data
 
 With 40M repos and 15M users, [GitHub](http://github.com) is the largest source
 code archive and one of the largest online collaboration platforms on the
@@ -156,9 +157,7 @@ ORDER BY pop DESC;
 
 Checkout the work of [Felipe Hoffa](https://medium.com/google-cloud/github-on-bigquery-analyze-all-the-code-b3576fd2b150)
 
-# GHTorrent
-
-## What is GHTorrent?
+## GHTorrent
 
 GHTorrent collects all data, both events and entities, from the GitHub REST API 
 and makes them available:
@@ -182,7 +181,7 @@ and makes them available:
 
 This is how fast MongoDB grows (x1M)
 
-| Entity| 2013 | 2016 | 2017 | $\delta$ 2016 - 2017 |
+| Entity| 2013 | 2016 | 2017 | $\Delta$ 2016 - 2017 |
 |:----- |:----:|:----:|:----:|:--------------------:|
 |Events | 43 | 476 | 886 | 1.9x  |
 |Users | 0.7 | 6.7 | 13.5 | 2x|
@@ -228,7 +227,7 @@ entities.
 * Roll your own dataset
 * 
 
-# Example queries
+## Example queries
 
 ## Basic info about forks
 
@@ -259,40 +258,40 @@ group by u.country_code
 order by num_commits desc
 ```
 
-# Using GHTorrent effectively
+## Using GHTorrent effectively
 
-## Combining MongoDB and MySQL data
+### Combining MongoDB and MySQL data
 
 ## Real-time data analysis
 
-## Common pitfals and how to avoid them
+## Avoiding common pitfals
 
-* GHTorrent (or any GitHub dataset) is not an exact GitHub replica!
+* GHTorrent (or any GitHub dataset) is not an exact GitHub replica
 
 You can retrieve a set of data and write scripts to fill in the gaps
 using the GitHub API/GraphQL.
 
-* Don't select repositories to analyze manually!
+* Don't select repositories to analyze manually
 
 This will lead to non-reprentativeness. Define a population first,
 then use _stratified sampling_ to select repositories from it.
 
-## Common pitfals and how to avoid them
+## Avoiding common pitfals
 
-* Repositories are not projects!
+* Repositories are not projects
 
 A large project, such as Homebrew, is usually composed of multiple
 repositories. Some repositories have equally active forks.
 To study a _project_ as a community, make sure you include all its 
 related activity.
 
-* Most repositories are idle!
+* Most repositories are idle
 
 Selecting randomly from repositories will lead to toy/dead repositories.
 
-## Common pitfals and how to avoid them
+## Avoiding common pitfals
 
-* Many active projects do not GitHub exclusively
+* Many active projects do not use GitHub exclusively
 
 The prime example are Apache projects. Projects with with high
 commit counts but not so many issues/pull requests are using other collaboration
@@ -301,13 +300,44 @@ platforms.
 * Not all activity is due to users
 
 ![Retrieval scheme](packman.png){ width=90% }
-Beware of robots and tool integrations, especially in issues and pull requests!
+Beware of bots and tool integrations, especially in issues and pull requests!
 
-## Selecting projects to analyze
+## Avoiding common pitfals 
+* At least 15% of merged pull requests appear as unmerged
 
-## GHTorrent and privacy
+Use the following heuristics to uncover them
 
-```{js, echo=T}
+1. An entry in table `pull_request_commits` also appears in `project_commits`
+2. A commit in `project_commits` references a PR number (e.g. `fixes: 12`)
+3. One of the 3 last comments in the discussion match following regex
+`(?:merg|appl|pull|push|integrat)(?:ing|i?ed)`
+4. The above regex matches the last comment before closing the PR
+
+## Selecting repositories to analyze
+
+Generally, we need repositories that are active and representative. We can 
+use the following selection process:
+
+From the whole population:
+
+1. Choose repositories that have forks ($A$)
+2. from $A$, exclude repos that where inactive _recently_ ($B$)
+2. from $B$, exclude repos that never received a PR ($C$)
+
+On $C$, we can then apply further criteria (e.g. programming language, 
+build system, minimum number of stars etc).
+
+If the project list is still too long, then apply _stratified sampling_ 
+
+## Reporeapers
+
+A curated set of repositories worth analyzing
+
+![Reporeapers](reporeapers.png){ width=90% }
+
+## Privacy
+
+```javascript
 {
     "id": "4141500869",
     "type": "IssueCommentEvent",
