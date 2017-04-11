@@ -93,7 +93,7 @@ GraphQL API allows us to query entities and their dependencies in one go
 
 ## GitHub Archive
 
-![GitHub Archive](gharchive.png)
+![GitHub Archive](gharchive.png){width=90%}
 
 Collects all GitHub **events** since late 2011, allows querying over Google
 BigQuery.
@@ -101,9 +101,9 @@ BigQuery.
 ## GitHub data on BigQuery
 
 An updating snapshot of both code + metadata for 2.5M repos. Allows for new
-types of research:
+types of research.
 
-* What are the most popular testing frameworks for Python?
+What are the most popular testing frameworks for Python?
 
 ```sql
 SELECT lib, count(*) AS count
@@ -176,6 +176,7 @@ and makes them available:
 * 70+ users donated API keys
 * 300 users, from > 200 institutions have access
 * 100+ papers
+* >40% of all GitHub-related papers (Cosentino et al.)
 
 ## Growth
 
@@ -216,7 +217,7 @@ entities.
 * **Full retrievals**: Get all info for a repo/user, in case some information is missing
 
 ## Important tables -- Users
-![Users](users.png){ width=50% }
+![Users](users.png){ width=30% }
 
 * Type: USR or ORG
 * Fake users represent emails with corresponding GitHub account
@@ -254,17 +255,38 @@ as it is optional for orgs/projects to publish it
 * The timestamps in `followers` and `watchers` were relative to the time of
 retrieval. Since mid-2015 they are accurate.
 
-## Get all commits for a non-fork
+## Querying the SQL schema
+
+Let's query!
+
+To make queries shorter, we use the following project
+
 ```{sql, connection=db, echo=T}
-select u1.login as author, c.sha, c.created_at
-from projects p, users u, users u1, commits c, project_commits pc
-where pc.commit_id = c.id
-  and pc.project_id = p.id
-  and u1.id = c.author_id
-  and u.id = p.owner_id
+select p.id, u.login, p.name
+from projects p, users u
+where u.id = p.owner_id
   and u.login = 'ReactiveX'
   and p.name = 'rxjs'
+```
+
+## Get all commits
+```{sql, connection=db, echo=T}
+select u.login as author, c.sha, c.created_at
+from users u, commits c, project_commits pc
+where pc.commit_id = c.id
+  and pc.project_id = 1
+  and u.id = c.author_id
 order by c.created_at desc
+```
+
+## Basic info about forks
+
+```{sql, connection=db, echo=T}
+select u.login, p.name,  p.forked_commit_id
+from projects p, users u
+where p.forked_from is not null
+and u.id = p.owner_id
+order by p.id desc
 ```
 
 ## Get all commits for a fork (1)
@@ -281,7 +303,6 @@ order by c.created_at desc
 ```
 
 **Q**: Why do we only get 2 commits?
-
 
 ## Get all commits for a fork (2)
 
@@ -319,22 +340,47 @@ from (
 order by created_at desc
 ```
 
-## Basic info about forks
-
-```{sql, connection=db, echo=T}
-select u.login, p.name,  p.forked_commit_id
-from projects p, users u
-where p.forked_from is not null
-and u.id = p.owner_id
-order by p.id desc
-```
 
 ## Which forks contributed code?
-```{sql, connection=db, echo=T, eval=F}
+```{sql, connection=db, echo=T}
+select cr.month as month, cr.created, co.contributing
+from (
+  select date(p.created_at,'start of month','+1 month','-1 day')  as month, 
+         count(*) as created 
+  from projects p 
+  where p.forked_from = 1
+  group by month) as cr
+join
+  (select date(p.created_at,'start of month','+1 month','-1 day') as month, 
+         count(*) as contributing 
+  from projects p 
+  where p.forked_from = 1
+  and exists (
+    select * 
+    from pull_requests pr 
+    where pr.head_repo_id = p.id) 
+  group by month) as co
+on cr.month = co.month
+order by month desc
 ```
 
 ## What are the core team members?
-```{sql, connection=db, echo=T, eval=F}
+```{sql, connection=db, echo=T}
+select distinct(u.login) as login
+    from commits c, users u, project_commits pc
+    where u.id = c.committer_id
+      and u.fake is 0
+      and pc.commit_id = c.id
+      and pc.project_id = 1
+      and c.created_at > datetime(date('2017-02-14'), '-3 month')
+union
+select distinct(u.login) as login
+  from pull_requests pr, users u, pull_request_history prh
+  where u.id = prh.actor_id
+    and prh.action = 'merged'
+    and prh.pull_request_id = pr.id
+    and pr.base_repo_id = 1
+    and prh.created_at > datetime(date('2017-02-14'), '-3 month')
 ```
 
 ## Which countries contributed most commits?
@@ -348,11 +394,43 @@ group by u.country_code
 order by num_commits desc
 ```
 
-## Using GHTorrent effectively
+## Tips for using GHTorrent effectively
 
-### Combining MongoDB and MySQL data
+* Use MySQL for project-centric queries
+    * Downloading and install a local copy is **recommended**
+* Only use MongoDB when you need:
+    * Text for issue comments, commit messages, commit diffs
+    * Connect to the online service
+    * Don't do aggregations on MongoDB, prefer [index-based](http://ghtorrent.org/raw.html) queries
+* Use BigQuery for large aggregations
+    * Also possible to combine with the GitHub dataset
+
+## Combining MongoDB and MySQL data
+
+"Use the `bash`, Luke"
+
+```bash
+echo "select c.sha \
+      from commits c, project_commits pc \
+      where pc.commit_id = c.id and \
+      pc.project_id = 1;" | 
+sqlite3 rxjs-ghtorrent.db|
+while read sha; do
+  echo "db.commits.find({sha: '$sha'},{'commit.message':1, _id:0})" | 
+  mongo --quiet github|
+  jq '.commit.message'|
+  xargs echo $sha
+done
+```
+
+* MySQL is basically a 2D index to MongoDB
+* Most useful information in MongoDB is in the `commits` collection
+
 
 ## Real-time data analysis
+
+
+
 
 ## Avoiding common pitfals
 

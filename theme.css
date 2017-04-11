@@ -47,3 +47,7 @@ code {
 .reveal pre {
   margin: 5px auto;
 }
+
+.reveal .knitsql-table {
+  font-size: 70%;
+}
