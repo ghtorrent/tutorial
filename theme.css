@@ -24,7 +24,8 @@ code {
 }
 
 .reveal p img {
-  text-align: center;
+  display: block;
+  margin: 0 auto;
 }
 
 .reveal ul {

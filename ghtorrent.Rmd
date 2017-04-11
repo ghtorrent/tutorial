@@ -10,6 +10,10 @@ output:
     reveal_options:
       slideNumber: true
       previewLinks: true
+bibliography: ghtorrent.bib
+csl: ieee.csl
+nocite: |
+  @Gousi13,@GS12
 ---
 
 ```{r setup, include=FALSE}
@@ -56,12 +60,19 @@ downloads, online access services or over BigQuery.
 
 The REST API allows us to browse entities given a known starting point
 
-```{bash, echo=T}
+```{bash, echo=T, eval=F}
 # Find Microsoft's 5 most starred repos
 curl -s "https://api.github.com/orgs/microsoft/repos?per_page=100&page=1" | 
 jq 'sort_by(.stargazers_count) |.[] | [.name, .stargazers_count] | @csv'| 
 sed -e 's/^"\(.*\)"$/\1/' |tr -d '\' | 
 tail -n 5
+```
+```
+## "referencesource",1207
+## "cpprestsdk",1585
+## "TypeScriptSamples",1825
+## "dotnet",8031
+## "TypeScript",20824
 ```
 
 * An API key is needed, 5k reqs/hour
@@ -70,7 +81,7 @@ tail -n 5
 
 ## GraphQL API
 
-GraphQL API allows us to query entities and their dependencies in one go
+GraphQL API allows us to query entities and their dependents in one go
 
 ```javascript
 {
@@ -100,8 +111,7 @@ BigQuery.
 
 ## GitHub data on BigQuery
 
-An updating snapshot of both code + metadata for 2.5M repos. Allows for new
-types of research.
+An updating snapshot of both code + metadata for 2.5M repos.
 
 What are the most popular testing frameworks for Python?
 
@@ -176,7 +186,7 @@ and makes them available:
 * 70+ users donated API keys
 * 300 users, from > 200 institutions have access
 * 100+ papers
-* >40% of all GitHub-related papers (Cosentino et al.)
+* $>$ 40% of all GitHub-related papers (Cosentino et al.)
 
 ## Growth
 
@@ -428,9 +438,26 @@ done
 
 
 ## Real-time data analysis
+```ruby
+conn = Bunny.new(:host => '127.0.0.1', :port => 5672,
+                 :username => 'streamer', :password => 'streamer')
+conn.start
+ch = conn.create_channel
+exchange = ch.topic('ght-streams', :durable => true)
+q = ch.queue('gousiosg_queue', :auto_delete => true)
+q.bind(exchange, :routing_key => 'ent.commits.insert')
 
+q.subscribe do |delivery_info, properties, payload|
+  commit = JSON.parse(payload)
+  repo = commit['url'].split(/\//)[4..5].join('/')
+  commit['files'].each do |f|
+    next unless /passw[or]*d.*[:=].*/.match? f['patch']
+    puts "Password found! repo=#{repo}, sha=#{commit['sha']}"
+  end
+end
+```
 
-
+Get updates from GHTorrent in a streaming fashion.
 
 ## Avoiding common pitfals
 
@@ -503,7 +530,7 @@ A curated set of repositories worth analyzing
 
 ![Reporeapers](reporeapers.png){ width=90% }
 
-## Privacy
+## Legal issues
 
 ```javascript
 {
@@ -514,21 +541,86 @@ A curated set of repositories worth analyzing
     "payload": {
       "action": "created",
       "issue": {
-        "id": 158442053,
-        "number": 138,
         "title": "Issue in CopyrightedProjectName",
         "user": {},
         "labels": [],
-        "state": "closed",
         "body": "Added data holding classes and a map manager. Will add a system soon"
       },
       "comment": {
         "created_at": "2016-06-14T05:51:16Z",
-        "updated_at": "2016-06-14T05:51:16Z",
         "body": "continuing in #141 \r\n"
       }
     }
 }
 ```
 
+**Q:** How many copyrights do you see in the JSON above?
+
+## Copyright situation
+
+![Copyright](copyright.png){ width=80% }
+
+* We can only assert copyright for non-trivial works
+* GHTorrent has a CC-BY-SA license
+
+## Privacy
+>**Privacy** is the ability of an individual or group to seclude themselves, 
+or information about themselves, and thereby express themselves selectively.
+
+To comply with the law, GHTorrent does not distribute privacy-sensitive
+information by default.
+
+* Still available by filling in the [Personal data](http://ghtorrent.org/pers-data.html) 
+form
+* Please don't spam developers
+* Several ethical considerations, perhaps review your research by your ethics
+board
+
+## How to run GHTorrent locally?
+
+Using plain Ruby
+
+```bash
+gem install sqlite3 bundler
+git clone https://github.com/gousiosg/github-mirror
+cd github-mirror
+bundle install
+mv config.yaml.standalone > config.yaml
+ruby -Ilib bin/ght-retrieve-repo -t token rails rails
+```
+
+Using Vagrant
+```bash
+apt-get install vagrant
+git clone https://github.com/ghtorrent/ghtorrent-vagrant.git
+cd ghtorrent-vagrant
+vagrant ssh
+ruby -Ilib bin/ght-retrieve-repo -t token rails rails
+```
+
+
 ## Contributing to GHTorrent
+
+We need your help!
+
+* Do you have spare hacking time? Pick a task below:
+    * Retrieve all commits for non-forked repos
+    * Pull request labels
+    * Reactions, Issue Timelines
+    * More info for repos: licenses, language updates etc
+* MongoDB data on BigQuery / Spark
+* Do you have a derivative service/dataset? Let's link it!
+* Did you find a bug? Let's discuss how to fix it!
+* Did you write a paper? Get it included in the [Hall of fame](http://ghtorrent.org/halloffame.html)!
+
+Don't hesitate to contact us: @[gousiosg](https://twitter.com/gousiosg), @[coolsweng](https://twitter.com/CoolSWEng)
+
+## Further reading
+<div id="refs"></div>
+
+
+## Copyright
+![Creative Commons](https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png)
+This work is (c) 2017 - onwards by Georgios Gousios and Diomidis Spinellis,
+licensed under the[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+](http://creativecommons.org/licenses/by-nc-sa/4.0/) license.
