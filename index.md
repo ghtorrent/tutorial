@@ -31,7 +31,8 @@ We plan to make the technical briefing an interactive session where we will work
 mining tasks. To make the session as productive as possible please make sure that:
 
 * You bring your laptop!
-* Install SQLite3, a client of it and download our [SQLite3 database](https://github.com/ghtorrent/tutorial/blob/master/rxjs-ghtorrent.db)
+* Install SQLite3 and download our [SQLite3 database](https://github.com/ghtorrent/tutorial/blob/master/rxjs-ghtorrent.db)
+* Install Git, make and Python
 
 ### Have your say!
 

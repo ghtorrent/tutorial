@@ -3,17 +3,19 @@ title: "Mining Software Engineering Data from GitHub"
 author: "Georgios Gousios and Diomidis Spinellis"
 date: "May 23, 2017"
 output:
-   revealjs::revealjs_presentation:
-    theme: white
+  revealjs::revealjs_presentation:
+    center: no
     css: theme.css
-    center: false
     reveal_options:
-      slideNumber: true
-      previewLinks: true
-bibliography: ghtorrent.bib
-csl: ieee.csl
+      previewLinks: yes
+      slideNumber: yes
+    theme: white
+  pdf_document: null
+linkcolor: blue
 nocite: |
-  @Gousi13,@GS12
+  @Gousi13,@GS12,@KGBSGD16,@MKCN17
+csl: ieee.csl
+bibliography: ghtorrent.bib
 ---
 
 ```{r setup, include=FALSE}
@@ -190,18 +192,18 @@ and makes them available:
 
 ## Growth
 
-This is how fast MongoDB grows (x1M)
+This is how fast MongoDB grows ($\times$ 1M)
 
 | Entity| 2013 | Feb 2016 | Apr 2017 | $\Delta$ 2016 - 2017 |
 |:----- |:----:|:----:|:----:|:--------------------:|
-|Events | 43 | 476 | 886 | 1.9x  |
-|Users | 0.7 | 6.7 | 13.5 | 2x|
-|Repos | 1.3| 28 | 57 | 2x |
-|Commits | 29.9 | 367 | 662 | 1.8x |
-|Issues | 2.3 | 24,1 | 41.1 | 1.7x |
-|Pull requests | 1.1 | 11.9 | 23.8 | 2x |
-|Issue Comments | 2.8 |42 | 74.2 | 1.7x |
-|Watchers | 7.7 | 51 | 84.9 | 1.6x |
+|Events | 43 | 476 | 886 | 1.9$\times$  |
+|Users | 0.7 | 6.7 | 13.5 | 2$\times$|
+|Repos | 1.3| 28 | 57 | 2$\times$ |
+|Commits | 29.9 | 367 | 662 | 1.8$\times$ |
+|Issues | 2.3 | 24.1 | 41.1 | 1.7$\times$ |
+|Pull requests | 1.1 | 11.9 | 23.8 | 2$\times$ |
+|Issue Comments | 2.8 |42 | 74.2 | 1.7$\times$ |
+|Watchers | 7.7 | 51 | 84.9 | 1.6$\times$ |
 
 GitHub/GHTorrent doubled its size during the last 14 months!
 
@@ -214,7 +216,7 @@ entities.
 
 ## Distributed operation
 
-![Retrieval scheme](distributed.png){ width=90% }
+![Retrieval architecture](distributed.png){ width=90% }
 
 * _Event retrieval_ nodes query the event API
 * _Data retrieval_ nodes apply the recursive descent retrieval process
@@ -227,7 +229,7 @@ entities.
 * **Full retrievals**: Get all info for a repo/user, in case some information is missing
 
 ## Important tables -- Users
-![Users](users.png){ width=30% }
+![Users table](users.png){ width=30% }
 
 * Type: USR or ORG
 * Fake users represent emails with corresponding GitHub account
@@ -235,7 +237,7 @@ entities.
 * Emails and real names not distributed by default
 
 ## Important tables -- Projects & Commits
-![projects commits](projects-commits.png){ width=60% }
+![Projects and commits tables](projects-commits.png){ width=60% }
 
 * A fork has a non-NULL `forked_from` and `forked_commit_id`
 * `language` in projects represents the primary language at collection time. More details in table `project_languages`
@@ -494,8 +496,9 @@ platforms.
 
 * Not all activity is due to users
 
-![Retrieval scheme](packman.png){ width=90% }
 Beware of bots and tool integrations, especially in issues and pull requests!
+
+![Retrieval scheme](packman.png){ width=90% }
 
 ## Avoiding common pitfals 
 * At least 15% of merged pull requests appear as unmerged
@@ -618,7 +621,8 @@ We need your help!
 * Did you find a bug? Let's discuss how to fix it!
 * Did you write a paper? Get it included in the [Hall of fame](http://ghtorrent.org/halloffame.html)!
 
-Don't hesitate to contact us: @[gousiosg](https://twitter.com/gousiosg), @[coolsweng](https://twitter.com/CoolSWEng)
+Don't hesitate to contact us: @[gousiosg](https://twitter.com/gousiosg), 
+@[coolsweng](https://twitter.com/CoolSWEng)
 
 ## Further reading
 <div id="refs"></div>
@@ -627,5 +631,5 @@ Don't hesitate to contact us: @[gousiosg](https://twitter.com/gousiosg), @[cools
 ## Copyright
 ![Creative Commons](https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png)
 This work is (c) 2017 - onwards by Georgios Gousios and Diomidis Spinellis,
-licensed under the[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
-](http://creativecommons.org/licenses/by-nc-sa/4.0/) license.
+licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 
+International](http://creativecommons.org/licenses/by-nc-sa/4.0/) license.
