@@ -33,11 +33,11 @@ With 40M repos and 15M users, [GitHub](http://github.com) is the largest source
 code archive and one of the largest online collaboration platforms on the
 planet.
 
-For software engineering researchers, GitHub is cool because:
+For software engineering researchers, GitHub is valuable because:
 
-* [api.github.com](https://api.github.com)
-* process and product data
-* interconnection
+* It has an extensive API: [api.github.com](https://api.github.com)
+* It exposes both process and product data
+* All data are highly interconnected
 
 ## GitHub's API
 
@@ -47,12 +47,14 @@ Contains all data from all public repositories
 
 * *Entities*: Represent the state of a resource at the time of query
 
+* *Graphs*: Query entities in a depth-first fashion (new!)
+
 ## Ways of accessing GitHub data
 
 * [REST API / GraphQL](https://developer.github.com)
 * [GitHub Archive](http://githubarchive.org) Collects GitHub events and offers
 them over BigQuery
-* [Github on BigQueury](https://cloud.google.com/bigquery/public-data/github) 
+* [Github on BigQueury](https://cloud.google.com/bigquery/public-data/github)
 The source code of all public GitHub repos along with metadata on BigQuery.
 * [GHTorrent](http://ghtorrent.org) Collects GitHub events, resolves all
 entities linked from those and creates a relational view. Data is offered as
@@ -64,9 +66,9 @@ The REST API allows us to browse entities given a known starting point
 
 ```{bash, echo=T, eval=F}
 # Find Microsoft's 5 most starred repos
-curl -s "https://api.github.com/orgs/microsoft/repos?per_page=100&page=1" | 
-jq 'sort_by(.stargazers_count) |.[] | [.name, .stargazers_count] | @csv'| 
-sed -e 's/^"\(.*\)"$/\1/' |tr -d '\' | 
+curl -s "https://api.github.com/orgs/microsoft/repos?per_page=100&page=1" |
+jq 'sort_by(.stargazers_count) |.[] | [.name, .stargazers_count] | @csv'|
+sed -e 's/^"\(.*\)"$/\1/' |tr -d '\' |
 tail -n 5
 ```
 ```
@@ -87,7 +89,7 @@ GraphQL API allows us to query entities and their dependents in one go
 
 ```javascript
 {
-  user(login: "gousiosg") {
+  user(login: "dhh") {
     name
     location
     organizations(first:10) {
@@ -103,6 +105,8 @@ GraphQL API allows us to query entities and their dependents in one go
   }
 }
 ```
+
+https://developer.github.com/v4/explorer/
 
 ## GitHub Archive
 
@@ -124,11 +128,11 @@ FROM (
   from (
     SELECT first(split(c.content, '\n')) as versions
     FROM (
-        SELECT * 
+        SELECT *
         FROM [bigquery-public-data:github_repos.files]
         WHERE path contains 'requirements.txt'
       ) AS f
-      JOIN 
+      JOIN
          [bigquery-public-data:github_repos.contents] c on f.id = c.id
     ) AS v
   WHERE REGEXP_MATCH(versions, "[>=]=[0-9]*")
@@ -171,10 +175,10 @@ Checkout the work of [Felipe Hoffa](https://medium.com/google-cloud/github-on-bi
 
 ## GHTorrent
 
-GHTorrent collects all data, both events and entities, from the GitHub REST API 
+GHTorrent collects all data, both events and entities, from the GitHub REST API
 and makes them available:
 
-* As queriable [MySQL](http://ghtorrent.org/mysql.html) and 
+* As queriable [MySQL](http://ghtorrent.org/mysql.html) and
 [MongoDB](http://ghtorrent.org/raw.html) databases
 * As [database dumps](http://ghtorrent.org/downloads.html) for both databases
 * Over Google [BigQuery](https://bigquery.cloud.google.com/dataset/ghtorrent-bq:ght_2017_01_19) (MySQL data only)
@@ -228,12 +232,17 @@ entities.
 * **Periodic updates**: Refresh the state of all repos/users (cater for deleted repos, changed user locations etc)
 * **Full retrievals**: Get all info for a repo/user, in case some information is missing
 
+## The MySQL schema
+
+
+![The MySQL schema](schema.png){ width=30% }
+
 ## Important tables -- Users
 ![Users table](users.png){ width=30% }
 
 * Type: USR or ORG
 * Fake users represent emails with corresponding GitHub account
-* ~15% users are geolocated
+* ~15% users are geo-located
 * Emails and real names not distributed by default
 
 ## Important tables -- Projects & Commits
@@ -324,7 +333,7 @@ We also need to retrieve the base repository commits up to the fork point.
 First, we get some information to make querying simpler
 
 ```{sql, connection=db, echo=T}
-select p.id, p.forked_from, p.forked_commit_id 
+select p.id, p.forked_from, p.forked_commit_id
 from projects p, users u
 where u.id = p.owner_id
   and u.login = 'herflis'
@@ -352,25 +361,24 @@ from (
 order by created_at desc
 ```
 
-
 ## Which forks contributed code?
 ```{sql, connection=db, echo=T}
 select cr.month as month, cr.created, co.contributing
 from (
-  select date(p.created_at,'start of month','+1 month','-1 day')  as month, 
-         count(*) as created 
-  from projects p 
+  select date(p.created_at,'start of month','+1 month','-1 day')  as month,
+         count(*) as created
+  from projects p
   where p.forked_from = 1
   group by month) as cr
 join
-  (select date(p.created_at,'start of month','+1 month','-1 day') as month, 
-         count(*) as contributing 
-  from projects p 
+  (select date(p.created_at,'start of month','+1 month','-1 day') as month,
+         count(*) as contributing
+  from projects p
   where p.forked_from = 1
   and exists (
-    select * 
-    from pull_requests pr 
-    where pr.head_repo_id = p.id) 
+    select *
+    from pull_requests pr
+    where pr.head_repo_id = p.id)
   group by month) as co
 on cr.month = co.month
 order by month desc
@@ -406,9 +414,30 @@ group by u.country_code
 order by num_commits desc
 ```
 
+
+## Challenge!
+
+Which year did RxJS get most stars from Argentina?
+
+**Time**: 3 mins
+
+**Prize**: A copy of Beautiful Architectures signed by the authors!
+
+![Projects and commits tables](ba.png){ width=30% }
+
+## Challenge results
+
+```{sql, connection=db, echo=T}
+select substr(w.created_at, 1, 4) as year, count(substr(w.created_at, 1, 4)) as count
+from watchers w left join users u on u.id = w.user_id 
+where u.country_code = 'ar'
+group by year
+```
+
+
 ## Tips for using GHTorrent effectively
 
-* Use MySQL for project-centric queries
+* Use MySQL for queries
     * Downloading and install a local copy is **recommended**
 * Only use MongoDB when you need:
     * Text for issue comments, commit messages, commit diffs
@@ -425,10 +454,10 @@ order by num_commits desc
 echo "select c.sha \
       from commits c, project_commits pc \
       where pc.commit_id = c.id and \
-      pc.project_id = 1;" | 
+      pc.project_id = 1;" |
 sqlite3 rxjs-ghtorrent.db|
 while read sha; do
-  echo "db.commits.find({sha: '$sha'},{'commit.message':1, _id:0})" | 
+  echo "db.commits.find({sha: '$sha'},{'commit.message':1, _id:0})" |
   mongo --quiet github|
   jq '.commit.message'|
   xargs echo $sha
@@ -438,6 +467,26 @@ done
 * MySQL is basically a 2D index to MongoDB
 * Most useful information in MongoDB is in the `commits` collection
 
+## Use BigQuery to join public datasets
+
+```sql
+SELECT c.country, COUNT(*) pushes, 
+  FIRST(c.population) population,
+  1000*COUNT(*)/FIRST(c.population) ratio_pushes
+FROM [githubarchive:month.201608] a
+JOIN [ghtorrent-bq:ght_2017_05_01.users] b
+ON a.actor.login=b.login
+JOIN (
+  SELECT LOWER(iso) iso, population, country
+  FROM [gdelt-bq:extra.countryinfo]
+  WHERE population > 300000
+) c
+ON c.iso=b.country_code
+WHERE country_code != '\\N'
+AND a.type='PushEvent'
+GROUP BY 1
+ORDER BY ratio_pushes DESC
+```
 
 ## Real-time data analysis
 ```ruby
@@ -461,7 +510,7 @@ end
 
 Get updates from GHTorrent in a streaming fashion.
 
-## Avoiding common pitfals
+## Avoiding common pitfalls
 
 * GHTorrent (or any GitHub dataset) is not an exact GitHub replica
 
@@ -470,16 +519,16 @@ using the GitHub API/GraphQL.
 
 * Don't select repositories to analyze manually
 
-This will lead to non-reprentativeness. Define a population first,
+This will lead to non-representativeness. Define a population first,
 then use _stratified sampling_ to select repositories from it.
 
-## Avoiding common pitfals
+## Avoiding common pitfalls
 
 * Repositories are not projects
 
 A large project, such as Homebrew, is usually composed of multiple
 repositories. Some repositories have equally active forks.
-To study a _project_ as a community, make sure you include all its 
+To study a _project_ as a community, make sure you include all its
 related activity.
 
 * Most repositories are idle
@@ -500,8 +549,8 @@ Beware of bots and tool integrations, especially in issues and pull requests!
 
 ![Retrieval scheme](packman.png){ width=90% }
 
-## Avoiding common pitfals 
-* At least 15% of merged pull requests appear as unmerged
+## Avoiding common pitfals
+* At least 15% of merged pull requests appear as not merged
 
 Use the following heuristics to uncover them
 
@@ -513,7 +562,7 @@ Use the following heuristics to uncover them
 
 ## Selecting repositories to analyze
 
-Generally, we need repositories that are active and representative. We can 
+Generally, we need repositories that are active and representative. We can
 use the following selection process:
 
 From the whole population:
@@ -522,10 +571,10 @@ From the whole population:
 2. from $A$, exclude repos that where inactive _recently_ ($B$)
 2. from $B$, exclude repos that never received a PR ($C$)
 
-On $C$, we can then apply further criteria (e.g. programming language, 
+On $C$, we can then apply further criteria (e.g. programming language,
 build system, minimum number of stars etc).
 
-If the project list is still too long, then apply _stratified sampling_ 
+If the project list is still too long, then apply _stratified sampling_
 
 ## Reporeapers
 
@@ -567,13 +616,13 @@ A curated set of repositories worth analyzing
 * GHTorrent has a CC-BY-SA license
 
 ## Privacy
->**Privacy** is the ability of an individual or group to seclude themselves, 
+>**Privacy** is the ability of an individual or group to seclude themselves,
 or information about themselves, and thereby express themselves selectively.
 
 To comply with the law, GHTorrent does not distribute privacy-sensitive
 information by default.
 
-* Still available by filling in the [Personal data](http://ghtorrent.org/pers-data.html) 
+* Still available by filling in the [Personal data](http://ghtorrent.org/pers-data.html)
 form
 * Please don't spam developers
 * Several ethical considerations, perhaps review your research by your ethics
@@ -601,7 +650,6 @@ vagrant ssh
 ruby -Ilib bin/ght-retrieve-repo -t token rails rails
 ```
 
-
 ## Contributing to GHTorrent
 
 We need your help!
@@ -616,15 +664,14 @@ We need your help!
 * Did you find a bug? Let's discuss how to fix it!
 * Did you write a paper? Get it included in the [Hall of fame](http://ghtorrent.org/halloffame.html)!
 
-Don't hesitate to contact us: @[gousiosg](https://twitter.com/gousiosg), 
+Don't hesitate to contact us: @[gousiosg](https://twitter.com/gousiosg),
 @[coolsweng](https://twitter.com/CoolSWEng)
 
 ## Further reading
 <div id="refs"></div>
 
-
 ## Copyright
 ![Creative Commons](https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png)
 This work is (c) 2017 - onwards by Georgios Gousios and Diomidis Spinellis,
-licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 
+licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0
 International](http://creativecommons.org/licenses/by-nc-sa/4.0/) license.
