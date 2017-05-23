@@ -555,6 +555,11 @@ build system, minimum number of stars etc).
 
 If the project list is still too long, then apply _stratified sampling_
 
+## Modular querying and testing
+
+* Modular queries with [simple-rolap](https://github.com/dspinellis/simple-rolap)
+* Unit testing with [rdbunit](https://github.com/dspinellis/rdbunit)
+
 ## Reporeapers
 
 A curated set of repositories worth analyzing

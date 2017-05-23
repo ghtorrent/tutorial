@@ -10,7 +10,7 @@ We plan to cover at least the following aspects:
 
 * GitHub data collection strategies, including querying the API, using online services such as GitHub Archive and GHTorrent.
 * Using GHTorrent to sample appropriate repositories for various types of research questions.
-* Writing, managing, and optimizing complex and expensive relational queries on GHTorrent relational data.
+* [Writing, managing, and optimizing complex and expensive relational queries on GHTorrent relational data](https://www.spinellis.gr/git-mine-briefing/).
 * Using GHTorrent effectively: understanding the data collection challenges and avoiding common pitfalls.
 * Copyright and privacy issues when using the GitHub data.
 
@@ -30,8 +30,11 @@ The data are current on Feb 14.
 We plan to make the technical briefing an interactive session where we will work together on common GHTorrent repository 
 mining tasks. To make the session as productive as possible please make sure that:
 
-* You bring your laptop!
-* Install SQLite3, a client of it and download our [SQLite3 database](https://github.com/ghtorrent/tutorial/blob/master/rxjs-ghtorrent.db)
+* You bring your (macOS/Linux/Unix/Bash on Ubuntu on Windows) laptop!
+* Install SQLite3 and download our [SQLite3 database](https://github.com/ghtorrent/tutorial/blob/master/rxjs-ghtorrent.db)
+* Clone [simple-rolap](https://github.com/dspinellis/simple-rolap) and [rdbunit](https://github.com/dspinellis/rdbunit/)
+* Install _rdbunit_
+* Install Git, make, Python, and GraphViz
 
 ### Have your say!
 
