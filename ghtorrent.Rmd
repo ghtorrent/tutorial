@@ -235,7 +235,7 @@ entities.
 ## The MySQL schema
 
 
-![The MySQL schema](schema.png){ width=30% }
+![The MySQL schema](schema.png){ width=80% }
 
 ## Important tables -- Users
 ![Users table](users.png){ width=30% }
@@ -413,27 +413,6 @@ where u.id = c.author_id
 group by u.country_code
 order by num_commits desc
 ```
-
-
-## Challenge!
-
-Which year did RxJS get most stars from Argentina?
-
-**Time**: 3 mins
-
-**Prize**: A copy of Beautiful Architectures signed by the authors!
-
-![Projects and commits tables](ba.png){ width=30% }
-
-## Challenge results
-
-```{sql, connection=db, echo=T}
-select substr(w.created_at, 1, 4) as year, count(substr(w.created_at, 1, 4)) as count
-from watchers w left join users u on u.id = w.user_id 
-where u.country_code = 'ar'
-group by year
-```
-
 
 ## Tips for using GHTorrent effectively
 
